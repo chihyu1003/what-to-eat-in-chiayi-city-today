@@ -589,52 +589,64 @@ function updateCuteClock(){
 }
 updateCuteClock();setInterval(updateCuteClock,1000);
 
-
 let musicOn = false;
 const bgm = document.getElementById("bgm");
 const musicToggle = document.getElementById("musicToggle");
 const musicText = document.getElementById("musicText");
+
 function setMusic(on){
-  if(!bgm || !musicText || !musicToggle) return;
+  musicOn = on;
   if(on){
-    bgm.volume = 0.22;
-    bgm.loop = true;
-    const p = bgm.play();
-    if(p && p.then){
-      p.then(()=>{
-        musicOn=true;
-        musicText.textContent="音樂 ON";
-        musicToggle.classList.add("on");
-      }).catch(()=>{
-        musicOn=false;
-        musicText.textContent="點我播放";
-        musicToggle.classList.remove("on");
-      });
-    }
+    bgm.volume = 0.24;
+    bgm.play().then(()=>{
+      musicText.textContent = "音樂 ON";
+      musicToggle.classList.add("on");
+      localStorage.setItem("chiayiMusic","on");
+    }).catch(()=>{
+      musicOn = false;
+      musicText.textContent = "音樂 OFF";
+      musicToggle.classList.remove("on");
+    });
   }else{
     bgm.pause();
-    musicOn=false;
-    musicText.textContent="音樂 OFF";
+    musicText.textContent = "音樂 OFF";
     musicToggle.classList.remove("on");
+    localStorage.setItem("chiayiMusic","off");
   }
 }
 function toggleMusic(){ setMusic(!musicOn); }
 
+window.addEventListener("DOMContentLoaded",()=>{
+  // Do not autoplay. If the user previously enabled it, the first interaction can start it.
+  if(localStorage.getItem("chiayiMusic")==="on"){
+    const startOnFirstInteraction=()=>{
+      if(!musicOn) setMusic(true);
+      window.removeEventListener("pointerdown",startOnFirstInteraction);
+      window.removeEventListener("keydown",startOnFirstInteraction);
+    };
+    window.addEventListener("pointerdown",startOnFirstInteraction,{once:true});
+    window.addEventListener("keydown",startOnFirstInteraction,{once:true});
+  }
+});
+
+
+
 const soundFiles = {
-  click: "assets/click.mp3",
-  confirm: "assets/confirm.mp3",
-  pop: "assets/pop.mp3",
-  wheel: "assets/wheel.mp3",
-  win: "assets/win.mp3",
-  favorite: "assets/favorite.mp3"
+  click: new Audio("assets/click.mp3"),
+  confirm: new Audio("assets/confirm.mp3"),
+  pop: new Audio("assets/pop.mp3"),
+  wheel: new Audio("assets/wheel.mp3"),
+  win: new Audio("assets/win.mp3"),
+  favorite: new Audio("assets/favorite.mp3")
 };
-function playSfx(name, volume=0.4){
-  const url=soundFiles[name];
-  if(!url)return;
+function playSfx(name, volume=0.45){
   try{
-    const audio=new Audio(url);
-    audio.volume=volume;
-    audio.play().catch(()=>{});
+    const source=soundFiles[name];
+    if(!source)return;
+    const sound=source.cloneNode();
+    sound.volume=volume;
+    sound.currentTime=0;
+    sound.play().catch(()=>{});
   }catch(e){}
 }
 function uiClick(){playSfx("click",0.35)}
@@ -643,15 +655,13 @@ function winSound(){playSfx("win",0.55)}
 function favoriteSound(){playSfx("favorite",0.42)}
 function confirmSound(){playSfx("confirm",0.4)}
 function popSound(){playSfx("pop",0.4)}
-
-// One delegated listener avoids duplicate sound playback.
 document.addEventListener("click", function(event){
   const el=event.target.closest("button, .nav-btn, .brand, .meal-option, .district-option, .budget-option");
   if(!el || el.id==="musicToggle" || el.disabled) return;
   if(el.id==="spinBtn") { confirmSound(); return; }
   if(el.matches("[data-favorite]")) { favoriteSound(); return; }
   uiClick();
-});
+}, true);
 </script>
 </body>
 </html>
